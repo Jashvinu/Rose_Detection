@@ -1,0 +1,31 @@
+# PlantVillage Rose Edition - Mode A Disease Detection Dataset Config
+# YOLOv8 dataset configuration for rose disease classification
+
+# Dataset paths (relative to project root)
+path: ../data/processed/mode_a_split
+train: train/images
+val: val/images
+test: test/images
+
+# Number of classes
+nc: 5
+
+# Class names
+names:
+  0: black_spot
+  1: rust
+  2: downy_mildew
+  3: stippling
+  4: healthy
+
+# Class descriptions for reference
+# black_spot: Diplocarpon rosae fungal infection - black circular spots with fringed edges
+# rust: Phragmidium fungal infection - orange/rust-colored pustules on leaves
+# downy_mildew: Peronospora sparsa - grayish-white downy growth on leaf undersides
+# stippling: Spider mite damage - tiny yellow/white dots from feeding
+# healthy: No visible disease symptoms
+
+# Training notes:
+# - Use YOLOv8-Nano for fast CPU inference
+# - Recommended image size: 416x416
+# - Data augmentation: mosaic, mixup, hsv shifts

@@ -1,0 +1,320 @@
+// PlantVillage Rose Edition - Prisma Schema
+// Database schema for plant disease detection tracking
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // Change to "mysql" or "sqlite" as needed
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String?
+  role          UserRole  @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  farms         Farm[]
+  scans         Scan[]
+  reports       Report[]
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  RESEARCHER
+}
+
+// ============================================
+// FARM & LOCATION MANAGEMENT
+// ============================================
+
+model Farm {
+  id            String    @id @default(cuid())
+  name          String
+  location      String?
+  coordinates   Json?     // { lat: number, lng: number }
+  size          Float?    // in acres
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  zones         Zone[]
+  scans         Scan[]
+  plants        Plant[]
+  
+  @@index([userId])
+}
+
+model Zone {
+  id            String    @id @default(cuid())
+  name          String
+  description   String?
+  coordinates   Json?     // GeoJSON polygon
+  createdAt     DateTime  @default(now())
+  
+  // Relations
+  farmId        String
+  farm          Farm      @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  plants        Plant[]
+  scans         Scan[]
+  
+  @@index([farmId])
+}
+
+// ============================================
+// PLANT TRACKING
+// ============================================
+
+model Plant {
+  id            String    @id @default(cuid())
+  identifier    String    // Plant tag/ID
+  variety       String?   // Rose variety
+  plantedAt     DateTime?
+  status        PlantStatus @default(HEALTHY)
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  farmId        String
+  farm          Farm      @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  zoneId        String?
+  zone          Zone?     @relation(fields: [zoneId], references: [id])
+  detections    Detection[]
+  
+  @@unique([farmId, identifier])
+  @@index([farmId])
+  @@index([zoneId])
+}
+
+enum PlantStatus {
+  HEALTHY
+  INFECTED
+  TREATED
+  REMOVED
+  MONITORING
+}
+
+// ============================================
+// DISEASE DETECTION
+// ============================================
+
+model Disease {
+  id            String    @id @default(cuid())
+  name          String    @unique
+  scientificName String?
+  description   String?
+  symptoms      String[]
+  treatments    String[]
+  severity      DiseaseSeverity @default(MODERATE)
+  imageUrl      String?
+  createdAt     DateTime  @default(now())
+  
+  // Relations
+  detections    Detection[]
+}
+
+enum DiseaseSeverity {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+}
+
+model Pest {
+  id            String    @id @default(cuid())
+  name          String    @unique
+  scientificName String?
+  description   String?
+  indicators    String[]
+  treatments    String[]
+  imageUrl      String?
+  createdAt     DateTime  @default(now())
+  
+  // Relations
+  detections    Detection[]
+}
+
+// ============================================
+// SCAN & DETECTION WORKFLOW
+// ============================================
+
+model Scan {
+  id            String    @id @default(cuid())
+  mode          ScanMode
+  imagePath     String
+  imageUrl      String?
+  status        ScanStatus @default(PENDING)
+  processedAt   DateTime?
+  metadata      Json?     // Camera settings, GPS, etc.
+  createdAt     DateTime  @default(now())
+  
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  farmId        String?
+  farm          Farm?     @relation(fields: [farmId], references: [id])
+  zoneId        String?
+  zone          Zone?     @relation(fields: [zoneId], references: [id])
+  detections    Detection[]
+  
+  @@index([userId])
+  @@index([farmId])
+  @@index([createdAt])
+}
+
+enum ScanMode {
+  MODE_A_DISEASE  // Disease detection mode
+  MODE_B_MITE     // Mite counting mode
+}
+
+enum ScanStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model Detection {
+  id            String    @id @default(cuid())
+  confidence    Float     // 0-1 detection confidence
+  boundingBox   Json      // { x, y, width, height }
+  className     String    // Detected class name
+  
+  // Mite-specific
+  miteCount     Int?      // For MODE_B
+  
+  // Disease-specific  
+  severity      Float?    // 0-1 severity score
+  
+  createdAt     DateTime  @default(now())
+  
+  // Relations
+  scanId        String
+  scan          Scan      @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  diseaseId     String?
+  disease       Disease?  @relation(fields: [diseaseId], references: [id])
+  pestId        String?
+  pest          Pest?     @relation(fields: [pestId], references: [id])
+  plantId       String?
+  plant         Plant?    @relation(fields: [plantId], references: [id])
+  treatments    Treatment[]
+  
+  @@index([scanId])
+  @@index([diseaseId])
+  @@index([pestId])
+}
+
+// ============================================
+// TREATMENT & ACTION TRACKING
+// ============================================
+
+model Treatment {
+  id            String    @id @default(cuid())
+  type          TreatmentType
+  product       String?
+  dosage        String?
+  applicationDate DateTime
+  notes         String?
+  effectiveness Float?    // 0-1 effectiveness rating
+  createdAt     DateTime  @default(now())
+  
+  // Relations
+  detectionId   String
+  detection     Detection @relation(fields: [detectionId], references: [id], onDelete: Cascade)
+  
+  @@index([detectionId])
+  @@index([applicationDate])
+}
+
+enum TreatmentType {
+  CHEMICAL
+  ORGANIC
+  BIOLOGICAL
+  PHYSICAL
+  REMOVAL
+}
+
+// ============================================
+// REPORTING & ANALYTICS
+// ============================================
+
+model Report {
+  id            String    @id @default(cuid())
+  title         String
+  type          ReportType
+  startDate     DateTime
+  endDate       DateTime
+  data          Json      // Aggregated report data
+  pdfUrl        String?
+  createdAt     DateTime  @default(now())
+  
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+  @@index([createdAt])
+}
+
+enum ReportType {
+  DAILY
+  WEEKLY
+  MONTHLY
+  CUSTOM
+  DISEASE_TREND
+  MITE_COUNT_TREND
+}
+
+// ============================================
+// MODEL MANAGEMENT
+// ============================================
+
+model MLModel {
+  id            String    @id @default(cuid())
+  name          String
+  version       String
+  mode          ScanMode
+  filePath      String
+  accuracy      Float?
+  parameters    Json?     // Training parameters
+  isActive      Boolean   @default(false)
+  trainedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  
+  @@unique([name, version])
+  @@index([mode])
+}
+
+// ============================================
+// AUDIT LOG
+// ============================================
+
+model AuditLog {
+  id            String    @id @default(cuid())
+  action        String
+  entity        String
+  entityId      String
+  oldValue      Json?
+  newValue      Json?
+  userId        String?
+  ipAddress     String?
+  createdAt     DateTime  @default(now())
+  
+  @@index([entity, entityId])
+  @@index([userId])
+  @@index([createdAt])
+}

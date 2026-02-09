@@ -1,0 +1,32 @@
+# PlantVillage Rose Edition - Mode B Mite Counting Dataset Config
+# YOLOv8 dataset configuration for TSSM life stage detection
+
+# Dataset paths (relative to project root)
+path: ../data/processed/mode_b_split
+train: train/images
+val: val/images
+test: test/images
+
+# Number of classes
+nc: 5
+
+# Class names - Two-Spotted Spider Mite (TSSM) life stages
+names:
+  0: egg
+  1: larva
+  2: nymph
+  3: adult_female
+  4: adult_male
+
+# Class descriptions for reference
+# egg: Spherical, translucent to opaque eggs (~0.14mm diameter)
+# larva: Six-legged stage, pale colored (~0.15mm)
+# nymph: Eight-legged immature stage, developing color (~0.2-0.3mm)
+# adult_female: Eight-legged, oval body, two dark spots visible (~0.4mm)
+# adult_male: Eight-legged, smaller wedge-shaped body (~0.3mm)
+
+# Training notes:
+# - Use YOLOv8-Small for better small object detection
+# - Recommended image size: 640x640 for higher resolution
+# - SAHI sliced inference recommended for macro photos
+# - Objects are very small - may need anchor box tuning
