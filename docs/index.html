@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlantVillage - Database Schema & Flow</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e4e4e7;
+            padding: 40px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #f472b6, #a855f7, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #a1a1aa;
+            margin-bottom: 40px;
+            font-size: 1.1rem;
+        }
+        
+        .section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            page-break-inside: avoid;
+        }
+        
+        h2 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #f472b6;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .mermaid {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 20px;
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        th {
+            background: rgba(168, 85, 247, 0.2);
+            color: #c4b5fd;
+            font-weight: 600;
+        }
+        
+        tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .commands {
+            background: #0d1117;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9rem;
+        }
+        
+        .commands code {
+            color: #7ee787;
+        }
+        
+        .commands .comment {
+            color: #8b949e;
+        }
+        
+        .print-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(90deg, #f472b6, #a855f7);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(168, 85, 247, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .print-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(168, 85, 247, 0.5);
+        }
+        
+        @media print {
+            body {
+                background: white;
+                color: #1a1a2e;
+                padding: 20px;
+            }
+            
+            .section {
+                background: #f8f9fa;
+                border: 1px solid #dee2e6;
+                box-shadow: none;
+            }
+            
+            h1 {
+                color: #1a1a2e;
+                -webkit-text-fill-color: #1a1a2e;
+            }
+            
+            h2 {
+                color: #7c3aed;
+            }
+            
+            .print-btn {
+                display: none;
+            }
+            
+            th {
+                background: #e9ecef;
+                color: #495057;
+            }
+            
+            .commands {
+                background: #f1f3f5;
+            }
+            
+            .commands code {
+                color: #087f5b;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌹 PlantVillage Rose Edition</h1>
+        <p class="subtitle">Database Schema & Application Flow Documentation</p>
+
+        <!-- Entity Relationship Diagram -->
+        <div class="section">
+            <h2>📊 Entity Relationship Diagram</h2>
+            <div class="mermaid">
+erDiagram
+    User ||--o{ Farm : owns
+    User ||--o{ Scan : performs
+    User ||--o{ Report : generates
+    
+    Farm ||--o{ Zone : contains
+    Farm ||--o{ Plant : has
+    Farm ||--o{ Scan : location
+    
+    Zone ||--o{ Plant : groups
+    Zone ||--o{ Scan : location
+    
+    Plant ||--o{ Detection : tracked_in
+    
+    Scan ||--o{ Detection : produces
+    
+    Detection }o--|| Disease : identifies
+    Detection }o--|| Pest : identifies
+    Detection ||--o{ Treatment : requires
+
+    User {
+        string id PK
+        string email UK
+        string name
+        enum role
+    }
+    
+    Farm {
+        string id PK
+        string name
+        string location
+        json coordinates
+    }
+    
+    Disease {
+        string id PK
+        string name UK
+        json symptoms
+        enum severity
+    }
+    
+    Scan {
+        string id PK
+        enum mode
+        string imagePath
+        enum status
+    }
+    
+    Detection {
+        string id PK
+        float confidence
+        json boundingBox
+        int miteCount
+    }
+            </div>
+        </div>
+
+        <!-- Application Flow -->
+        <div class="section">
+            <h2>🔄 Application Flow</h2>
+            <div class="mermaid">
+flowchart TB
+    subgraph INPUT["📸 Image Input"]
+        camera["Camera/Upload"]
+    end
+    
+    subgraph MODES["🔬 Detection Modes"]
+        modeA["Mode A: Disease Scanner"]
+        modeB["Mode B: Mite Counter"]
+    end
+    
+    subgraph ML["🤖 ML Pipeline"]
+        yolo["YOLOv8 Model"]
+        sahi["SAHI Processor"]
+        inference["Inference Engine"]
+    end
+    
+    subgraph DB["🗄️ Database"]
+        scan["Scan Record"]
+        detection["Detection Results"]
+        disease["Disease/Pest Match"]
+        treatment["Treatment Plan"]
+    end
+    
+    subgraph OUTPUT["📊 Output"]
+        annotated["Annotated Image"]
+        report["Detection Report"]
+    end
+    
+    camera --> modeA
+    camera --> modeB
+    modeA --> yolo
+    modeB --> yolo
+    yolo --> sahi
+    sahi --> inference
+    inference --> scan
+    scan --> detection
+    detection --> disease
+    disease --> treatment
+    detection --> annotated
+    treatment --> report
+            </div>
+        </div>
+
+        <!-- Scan Workflow -->
+        <div class="section">
+            <h2>🔍 Scan Workflow</h2>
+            <div class="mermaid">
+sequenceDiagram
+    participant U as User
+    participant App as Streamlit App
+    participant ML as ML Engine
+    participant DB as Database
+    
+    U->>App: Upload Image
+    App->>App: Select Mode (A/B)
+    App->>ML: Send for Processing
+    
+    alt Mode A: Disease Detection
+        ML->>ML: YOLOv8 Disease Model
+        ML-->>App: Disease Classifications
+    else Mode B: Mite Counting
+        ML->>ML: YOLOv8 + SAHI
+        ML-->>App: Mite Counts
+    end
+    
+    App->>DB: Create Scan Record
+    App->>DB: Store Detections
+    DB-->>App: Treatment Recommendations
+    
+    App-->>U: Annotated Image + Report
+            </div>
+        </div>
+
+        <!-- Mode Comparison -->
+        <div class="section">
+            <h2>⚡ Mode Comparison</h2>
+            <div class="mermaid">
+graph LR
+    subgraph MA["Mode A: Disease Scanner"]
+        direction TB
+        a1["📷 Full Image"]
+        a2["🔍 YOLOv8"]
+        a3["🏷️ Classification"]
+        a4["📋 Treatment"]
+        a1 --> a2 --> a3 --> a4
+    end
+    
+    subgraph MB["Mode B: Mite Counter"]
+        direction TB
+        b1["📷 High-Res"]
+        b2["🧩 SAHI Tiles"]
+        b3["🔢 Count"]
+        b4["📊 Density"]
+        b1 --> b2 --> b3 --> b4
+    end
+            </div>
+        </div>
+
+        <!-- Data Model Summary -->
+        <div class="section">
+            <h2>📋 Data Model Summary</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Model</th>
+                        <th>Purpose</th>
+                        <th>Key Fields</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>User</strong></td>
+                        <td>Authentication & access</td>
+                        <td>email, role (USER/ADMIN/RESEARCHER)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Farm</strong></td>
+                        <td>Location management</td>
+                        <td>name, coordinates, size</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Zone</strong></td>
+                        <td>Sub-areas in farm</td>
+                        <td>name, GeoJSON polygon</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Plant</strong></td>
+                        <td>Individual plant tracking</td>
+                        <td>identifier, variety, status</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Disease</strong></td>
+                        <td>Disease catalog</td>
+                        <td>name, symptoms, severity</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Pest</strong></td>
+                        <td>Pest catalog</td>
+                        <td>name, indicators, treatments</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Scan</strong></td>
+                        <td>Image scan records</td>
+                        <td>mode (A/B), imagePath, status</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Detection</strong></td>
+                        <td>AI detection results</td>
+                        <td>confidence, boundingBox, miteCount</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Treatment</strong></td>
+                        <td>Applied treatments</td>
+                        <td>type, product, effectiveness</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Report</strong></td>
+                        <td>Analytics exports</td>
+                        <td>type, dateRange, data</td>
+                    </tr>
+                    <tr>
+                        <td><strong>MLModel</strong></td>
+                        <td>Model version control</td>
+                        <td>name, version, accuracy</td>
+                    </tr>
+                    <tr>
+                        <td><strong>AuditLog</strong></td>
+                        <td>System activity</td>
+                        <td>action, entity, changes</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Quick Reference -->
+        <div class="section">
+            <h2>⚡ Quick Commands</h2>
+            <div class="commands">
+                <code>npx prisma studio</code> <span class="comment"># Open visual database editor</span><br>
+                <code>npx prisma db push</code> <span class="comment"># Push schema changes</span><br>
+                <code>npx prisma db seed</code> <span class="comment"># Seed initial data</span><br>
+                <code>npx prisma generate</code> <span class="comment"># Regenerate client</span>
+            </div>
+        </div>
+    </div>
+
+    <button class="print-btn" onclick="window.print()">📄 Print to PDF</button>
+
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose'
+        });
+    </script>
+</body>
+</html>
