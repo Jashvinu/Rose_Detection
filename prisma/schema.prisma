@@ -117,8 +117,8 @@ model Disease {
   name          String    @unique
   scientificName String?
   description   String?
-  symptoms      String[]
-  treatments    String[]
+  symptoms      Json      // Array of symptoms as JSON
+  treatments    Json      // Array of treatments as JSON
   severity      DiseaseSeverity @default(MODERATE)
   imageUrl      String?
   createdAt     DateTime  @default(now())
@@ -139,8 +139,8 @@ model Pest {
   name          String    @unique
   scientificName String?
   description   String?
-  indicators    String[]
-  treatments    String[]
+  indicators    Json      // Array of indicators as JSON
+  treatments    Json      // Array of treatments as JSON
   imageUrl      String?
   createdAt     DateTime  @default(now())
   
