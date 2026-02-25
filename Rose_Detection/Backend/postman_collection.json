@@ -1,0 +1,378 @@
+{
+	"info": {
+		"name": "PlantVillage Rose Disease Detection",
+		"description": "Rose disease detection API with motion-compensated burst deduplication and PlantVillage integration.\n\nEndpoints:\n- POST /api/v1/detect — upload images for detection\n- GET /api/v1/jobs/:job_id — retrieve job results\n- GET /api/v1/jobs/:job_id/frames/:frame_index/image — get annotated frame\n- GET /health — health check",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000"
+		},
+		{
+			"key": "job_id",
+			"value": ""
+		}
+	],
+	"item": [
+		{
+			"name": "Detection",
+			"item": [
+				{
+					"name": "POST - Detect (Basic)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var data = pm.response.json();",
+									"pm.collectionVariables.set('job_id', data.job_id);",
+									"",
+									"pm.test('Status is completed', function() {",
+									"    pm.expect(data.status).to.eql('completed');",
+									"});",
+									"pm.test('Summary has total_detections', function() {",
+									"    pm.expect(data.summary).to.have.property('total_detections');",
+									"});",
+									"",
+									"// Render annotated images in the Visualize tab",
+									"var template = `",
+									"<h2>Detection Results</h2>",
+									"<p><strong>Status:</strong> {{status}} | <strong>Job:</strong> {{job_id}}</p>",
+									"<h3>Summary</h3>",
+									"<table><tr>{{#each summary}}<td style='padding:4px 12px;border:1px solid #ccc'><b>{{@key}}</b><br>{{this}}</td>{{/each}}</tr></table>",
+									"<h3>Frames</h3>",
+									"{{#each per_frame_details}}",
+									"<div style='margin:16px 0;border:1px solid #ddd;padding:12px;border-radius:8px'>",
+									"  <p><strong>Frame {{frame_index}}</strong> — {{filename}} — {{detections.length}} detection(s) — {{active_tracks}} active tracks</p>",
+									"  {{#if annotated_image}}",
+									"    <img src='{{annotated_image}}' style='max-width:100%;border:1px solid #aaa;border-radius:4px'/>",
+									"  {{else}}",
+									"    <p><em>No annotated image (set visualize=true)</em></p>",
+									"  {{/if}}",
+									"</div>",
+									"{{/each}}",
+									"`;",
+									"pm.visualizer.set(template, data);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "images",
+									"type": "file",
+									"src": "",
+									"description": "Select one or more images (hold Ctrl/Cmd to multi-select)"
+								},
+								{
+									"key": "token",
+									"value": "test-session",
+									"type": "text"
+								},
+								{
+									"key": "visualize",
+									"value": "true",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/detect",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "detect"]
+						},
+						"description": "Basic detection without motion compensation. Sends images through detect → track → count pipeline."
+					}
+				},
+				{
+					"name": "POST - Detect Burst (Motion Compensated)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var data = pm.response.json();",
+									"pm.collectionVariables.set('job_id', data.job_id);",
+									"",
+									"pm.test('Status is completed', function() {",
+									"    pm.expect(data.status).to.eql('completed');",
+									"});",
+									"pm.test('Has unique_detections array', function() {",
+									"    pm.expect(data.unique_detections).to.be.an('array');",
+									"});",
+									"pm.test('Has unique_frames array', function() {",
+									"    pm.expect(data.unique_frames).to.be.an('array');",
+									"});",
+									"pm.test('Unique detections <= total raw detections', function() {",
+									"    var totalRaw = data.per_frame_details.reduce(function(sum, f) {",
+									"        return sum + f.detections.length;",
+									"    }, 0);",
+									"    pm.expect(data.unique_detections.length).to.be.at.most(totalRaw);",
+									"});",
+									"",
+									"// Render annotated images + deduplication stats",
+									"var template = `",
+									"<h2>Burst Detection Results (Motion Compensated)</h2>",
+									"<p><strong>Status:</strong> {{status}} | <strong>Job:</strong> {{job_id}}</p>",
+									"<h3>Summary</h3>",
+									"<table><tr>{{#each summary}}<td style='padding:4px 12px;border:1px solid #ccc'><b>{{@key}}</b><br>{{this}}</td>{{/each}}</tr></table>",
+									"<h3>Unique Detections ({{unique_detections.length}})</h3>",
+									"<table border='1' cellpadding='6' style='border-collapse:collapse'>",
+									"<tr><th>Track</th><th>Label</th><th>Confidence</th><th>Frame</th><th>File</th></tr>",
+									"{{#each unique_detections}}",
+									"<tr><td>{{track_id}}</td><td>{{label}}</td><td>{{confidence}}</td><td>{{frame_index}}</td><td>{{filename}}</td></tr>",
+									"{{/each}}",
+									"</table>",
+									"<h3>Unique Frames: [{{unique_frames}}]</h3>",
+									"<h3>All Frames</h3>",
+									"{{#each per_frame_details}}",
+									"<div style='margin:16px 0;border:1px solid #ddd;padding:12px;border-radius:8px'>",
+									"  <p><strong>Frame {{frame_index}}</strong> — {{filename}} — {{detections.length}} detection(s) — {{active_tracks}} active tracks</p>",
+									"  {{#if annotated_image}}",
+									"    <img src='{{annotated_image}}' style='max-width:100%;border:1px solid #aaa;border-radius:4px'/>",
+									"  {{else}}",
+									"    <p><em>No annotated image</em></p>",
+									"  {{/if}}",
+									"</div>",
+									"{{/each}}",
+									"`;",
+									"pm.visualizer.set(template, data);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "images",
+									"type": "file",
+									"src": "",
+									"description": "Select burst images in order (hold Ctrl/Cmd to multi-select)"
+								},
+								{
+									"key": "token",
+									"value": "test-burst",
+									"type": "text"
+								},
+								{
+									"key": "motion_compensation",
+									"value": "true",
+									"type": "text",
+									"description": "Enable ORB+RANSAC motion compensation between frames"
+								},
+								{
+									"key": "min_hits",
+									"value": "1",
+									"type": "text",
+									"description": "Set to 1 or 2 for short bursts (2-5 frames)"
+								},
+								{
+									"key": "visualize",
+									"value": "true",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/detect",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "detect"]
+						},
+						"description": "Burst deduplication mode. Upload sequential burst frames — motion compensation warps bounding boxes to track leaves across shifted frames. Returns unique_detections (one per leaf) and unique_frames (frames with first sightings)."
+					}
+				},
+				{
+					"name": "POST - Detect PlantVillage Bed Session",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var data = pm.response.json();",
+									"pm.collectionVariables.set('job_id', data.job_id);",
+									"",
+									"pm.test('Status is completed', function() {",
+									"    pm.expect(data.status).to.eql('completed');",
+									"});",
+									"pm.test('Has afflictions array', function() {",
+									"    pm.expect(data.afflictions).to.be.an('array');",
+									"});",
+									"pm.test('Has condition field', function() {",
+									"    pm.expect(data.condition).to.be.oneOf(['healthy', 'new', 'existing']);",
+									"});",
+									"pm.test('Scout ID parsed from token', function() {",
+									"    pm.expect(data.scout_id).to.eql(91);",
+									"});",
+									"pm.test('Partition ID parsed from token', function() {",
+									"    pm.expect(data.partition_id).to.eql(2);",
+									"});",
+									"pm.test('Bed ID parsed from token', function() {",
+									"    pm.expect(data.bed_id).to.eql(3338);",
+									"});",
+									"",
+									"// Render PlantVillage-formatted results",
+									"var template = `",
+									"<h2>PlantVillage Bed Session Results</h2>",
+									"<p><strong>Scout:</strong> {{scout_id}} | <strong>Partition:</strong> {{partition_id}} | <strong>Bed:</strong> {{bed_id}}</p>",
+									"<p><strong>Condition:</strong> <span style='font-size:1.2em;font-weight:bold;color:{{#if (eq condition 'healthy')}}green{{else}}red{{/if}}'>{{condition}}</span></p>",
+									"<h3>Afflictions</h3>",
+									"{{#if afflictions.length}}",
+									"<table border='1' cellpadding='6' style='border-collapse:collapse'>",
+									"<tr><th>ID</th><th>Name</th></tr>",
+									"{{#each afflictions}}<tr><td>{{id}}</td><td>{{name}}</td></tr>{{/each}}",
+									"</table>",
+									"{{else}}<p>None detected — healthy</p>{{/if}}",
+									"<h3>Summary</h3>",
+									"<table><tr>{{#each summary}}<td style='padding:4px 12px;border:1px solid #ccc'><b>{{@key}}</b><br>{{this}}</td>{{/each}}</tr></table>",
+									"<h3>Unique Detections ({{unique_detections.length}})</h3>",
+									"<table border='1' cellpadding='6' style='border-collapse:collapse'>",
+									"<tr><th>Track</th><th>Label</th><th>Confidence</th><th>Frame</th><th>File</th></tr>",
+									"{{#each unique_detections}}",
+									"<tr><td>{{track_id}}</td><td>{{label}}</td><td>{{confidence}}</td><td>{{frame_index}}</td><td>{{filename}}</td></tr>",
+									"{{/each}}",
+									"</table>",
+									"<h3>Frames</h3>",
+									"{{#each per_frame_details}}",
+									"<div style='margin:16px 0;border:1px solid #ddd;padding:12px;border-radius:8px'>",
+									"  <p><strong>Frame {{frame_index}}</strong> — {{filename}} — {{detections.length}} detection(s)</p>",
+									"  {{#if annotated_image}}",
+									"    <img src='{{annotated_image}}' style='max-width:100%;border:1px solid #aaa;border-radius:4px'/>",
+									"  {{else}}",
+									"    <p><em>No annotated image</em></p>",
+									"  {{/if}}",
+									"</div>",
+									"{{/each}}",
+									"`;",
+									"pm.visualizer.set(template, data);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "images",
+									"type": "file",
+									"src": "",
+									"description": "Select bed photos (e.g. 16 photos from a bed walkby)"
+								},
+								{
+									"key": "token",
+									"value": "scout:91|partition:2|bed:3338",
+									"type": "text",
+									"description": "PlantVillage token format: scout:{id}|partition:{id}|bed:{id}"
+								},
+								{
+									"key": "motion_compensation",
+									"value": "true",
+									"type": "text"
+								},
+								{
+									"key": "min_hits",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "visualize",
+									"value": "true",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/detect",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "detect"]
+						},
+						"description": "Full PlantVillage integration. Token carries scout/partition/bed context. Response includes afflictions mapped to PV IDs, condition (healthy/new/existing), and deduplicated leaf counts."
+					}
+				}
+			]
+		},
+		{
+			"name": "Jobs",
+			"item": [
+				{
+					"name": "GET - Job Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/jobs/{{job_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "jobs", "{{job_id}}"]
+						},
+						"description": "Retrieve full results for a completed job by ID. The job_id is auto-set from detection requests."
+					}
+				},
+				{
+					"name": "GET - Annotated Frame Image",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/jobs/{{job_id}}/frames/:frame_index/image",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "jobs", "{{job_id}}", "frames", ":frame_index", "image"],
+							"variable": [
+								{
+									"key": "frame_index",
+									"value": "0"
+								}
+							]
+						},
+						"description": "Returns the annotated JPEG image for a specific frame. Open in browser or view in Postman."
+					}
+				}
+			]
+		},
+		{
+			"name": "Health",
+			"item": [
+				{
+					"name": "GET - Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Server is healthy', function() {",
+									"    pm.expect(pm.response.json().status).to.eql('ok');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": ["{{base_url}}"],
+							"path": ["health"]
+						},
+						"description": "Verify the server is running and model is loaded."
+					}
+				}
+			]
+		}
+	]
+}

@@ -42,6 +42,9 @@ env/
 *.pb
 runs/
 
+# Allow Backend model
+!Rose_Detection/Backend/app/model/*.tflite
+
 # Model outputs
 models/*.pt
 models/*.pth
@@ -55,6 +58,8 @@ datasets/
 *.csv
 *.json
 !configs/*.yaml
+!Rose_Detection/Backend/postman_collection.json
+!Rose_Detection/Backend/app/model/labels.txt
 
 # IDE
 .idea/
@@ -82,11 +87,6 @@ htmlcov/
 
 # Node/Prisma
 node_modules/
-prisma/migrations/
-.prisma/
-
-# Streamlit
-.streamlit/
 
 # Claude/AI
 .claude/

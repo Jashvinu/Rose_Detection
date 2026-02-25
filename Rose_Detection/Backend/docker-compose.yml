@@ -1,0 +1,10 @@
+services:
+  mite-detector:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - mite-data:/data
+
+volumes:
+  mite-data:
