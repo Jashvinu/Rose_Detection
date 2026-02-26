@@ -1,63 +1,8 @@
-# PlantVillage Rose Edition — System Documentation
+# Rose Detection Backend — System Documentation
 
 ## What We're Building
 
-An automated rose disease detection system for PlantVillage field scouts. The backend accepts an S3 image URI, runs the TFLite model, and returns detections for a single image.
-
----
-
-## How PlantVillage Works Today (The Upstream System)
-
-PlantVillage is an existing platform at `plantvillage.psu.edu` used by field scouts in Kenyan greenhouses.
-
-### Current Manual Workflow
-
-```
-Scout arrives at greenhouse
-  → For each Partition (A / B / C):
-      → For each Bed (1, 2, 3...):
-          → Takes ~16 photos of leaves
-          → Manually selects afflictions (Downy Mildew, Mite, Powdery Mildew)
-          → Manually sets condition (healthy / existing / new)
-  → Submits scout report
-  → Admin reviews at /admin/flowers/scouts/{id}
-```
-
-### Data Model
-
-```
-Greenhouse (id, name, location)
-  └── Scout (id, lat, lng, collected_at, user)
-        └── Partition (1=A, 2=B, 3=C)
-              └── Bed (id, bed_number, problem, sub_affliction)
-                    ├── afflictions[]    → {id, name}
-                    ├── sub_afflictions[] → {id, name, color}
-                    └── photos[]         → {id, url} (S3-hosted .webp)
-```
-
-### Known Afflictions
-
-| ID | Name           | Sub-Afflictions          |
-|----|----------------|--------------------------|
-| 1  | Downy Mildew   | New spots, Spreading ... |
-| 2  | Powdery Mildew | New spots, Spreading ... |
-| 3  | Mite           | New spots, Spreading ... |
-| 4  | Black Spot     | (added by our model)     |
-
-### Upstream API
-
-The PlantVillage admin uses Inertia.js. To get raw JSON, send `X-Inertia: true` header:
-
-| Endpoint | Returns |
-|---|---|
-| `GET /admin/flowers/scouts` | Paginated scout list |
-| `GET /admin/flowers/scouts/{id}` | Scout detail with partitions + beds grid |
-| `GET /admin/flowers/scouts/{id}/partitions/{id}` | Beds with photos, afflictions, conditions |
-| `GET /admin/flowers/greenhouses` | Greenhouse list with scout counts |
-
-Full reference: [`PLANTVILLAGE_API_REFERENCE.md`](./PLANTVILLAGE_API_REFERENCE.md)
-
----
+FastAPI backend that accepts an S3 image URI, runs the TFLite model, and returns detections for a single image.
 
 ## What We Built
 
@@ -65,15 +10,6 @@ Full reference: [`PLANTVILLAGE_API_REFERENCE.md`](./PLANTVILLAGE_API_REFERENCE.m
 
 ```
 Rose_Detection/
-├── Training/                    # Model training
-│   ├── data/
-│   │   ├── black_spot/          # 189 labeled images
-│   │   └── downy_mildew/        # labeled images
-│   ├── train.py                 # TensorFlow training script
-│   ├── export_tflite.py         # Export to TFLite for edge/server
-│   └── output/
-│       └── labels.txt           # black_spot, downy_mildew
-│
 ├── Backend/                     # FastAPI detection server
 │   ├── Dockerfile
 │   ├── docker-compose.yml
@@ -89,9 +25,8 @@ Rose_Detection/
 │       └── pipeline/
 │           ├── classifier.py    # TFLite model wrapper
 │           └── tiler.py         # NMS utilities
-│
-├── Burst_Bed1_Example/          # 5 test burst frames from a real walkby
-└── PLANTVILLAGE_API_REFERENCE.md
+├── PLANTVILLAGE_API_REFERENCE.md
+└── SYSTEM.md
 ```
 
 ### Detection Pipeline
@@ -162,14 +97,6 @@ docker compose up --build
 
 Server starts at `http://localhost:8000`.
 
-### Local
-
-```bash
-cd Backend
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
-
 ### Interactive Docs
 
 - Swagger UI: http://localhost:8000/docs
@@ -178,11 +105,3 @@ uvicorn app.main:app --reload
 ### Testing with Postman
 
 Import `Backend/postman_collection.json` and run the `POST /detect_flowers` request.
-
----
-
-## What's Next
-
-- [ ] Add `powdery_mildew` and `mite` to training data + retrain model
-- [ ] Add S3 photo download to automatically pull bed photos from PlantVillage
-- [ ] Edge deployment (TFLite on mobile) for offline detection in the field
