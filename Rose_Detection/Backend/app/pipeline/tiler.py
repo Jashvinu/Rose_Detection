@@ -1,16 +1,11 @@
-"""Detection helpers: IoU, NMS, and full-image YOLO inference."""
+"""IoU and NMS helpers."""
 
 from __future__ import annotations
 
-import numpy as np
-from PIL import Image
-
-from app.pipeline.classifier import YOLOTFLiteDetector
 from app.schemas import BBox, Detection
 
 
 def compute_iou(a: BBox, b: BBox) -> float:
-    """Compute intersection-over-union between two bounding boxes."""
     inter_x1 = max(a.x1, b.x1)
     inter_y1 = max(a.y1, b.y1)
     inter_x2 = min(a.x2, b.x2)
@@ -21,15 +16,10 @@ def compute_iou(a: BBox, b: BBox) -> float:
     area_b = (b.x2 - b.x1) * (b.y2 - b.y1)
     union = area_a + area_b - inter_area
 
-    if union <= 0:
-        return 0.0
-    return inter_area / union
+    return inter_area / union if union > 0 else 0.0
 
 
-def nms_per_class(
-    detections: list[Detection],
-    iou_threshold: float,
-) -> list[Detection]:
+def nms_per_class(detections: list[Detection], iou_threshold: float) -> list[Detection]:
     """Greedy NMS applied independently per class label."""
     by_class: dict[str, list[Detection]] = {}
     for det in detections:
@@ -44,22 +34,6 @@ def nms_per_class(
                 continue
             kept.append(det_i)
             for j in range(i + 1, len(class_dets)):
-                if suppressed[j]:
-                    continue
-                if compute_iou(det_i.bbox, class_dets[j].bbox) >= iou_threshold:
+                if not suppressed[j] and compute_iou(det_i.bbox, class_dets[j].bbox) >= iou_threshold:
                     suppressed[j] = True
-
     return kept
-
-
-def detect_in_image(
-    image: Image.Image,
-    detector: YOLOTFLiteDetector,
-    frame_index: int,
-    confidence_threshold: float = 0.5,
-    nms_iou_threshold: float = 0.45,
-) -> list[Detection]:
-    """Run YOLO detection on the full image and apply NMS."""
-    img_arr = np.array(image.convert("RGB"), dtype=np.uint8)
-    dets = detector.detect(img_arr, confidence_threshold, frame_index)
-    return nms_per_class(dets, nms_iou_threshold)
