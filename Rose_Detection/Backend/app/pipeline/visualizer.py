@@ -6,12 +6,16 @@ from PIL import Image, ImageDraw, ImageFont
 
 from app.schemas import Detection
 
-# Distinct colors per class (extend as needed)
+# Distinct colors per YOLO11s class label
 _PALETTE: dict[str, str] = {
-    "black_spot": "#FF4136",
-    "downy_mildew": "#0074D9",
+    "healthy_leaf": "#2ECC40",
+    "powdery_mildew_leaf": "#FF851B",
+    "two_spotted_spider_mite_damage_leaf": "#FF4136",
+    "unknown_disease_leaf": "#B10DC9",
+    "chemical_residue_leaf": "#FFDC00",
+    "downy_mildew_leaf": "#0074D9",
 }
-_DEFAULT_COLOR = "#2ECC40"
+_DEFAULT_COLOR = "#AAAAAA"
 
 
 def annotate_image(

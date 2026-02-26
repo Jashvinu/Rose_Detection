@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from app.schemas import Affliction, UniqueDetection
 
-# PlantVillage affliction definitions (from admin API reference)
+# PlantVillage affliction definitions mapped to YOLO11s label names.
+# healthy_leaf is intentionally absent — it produces no affliction.
 LABEL_TO_AFFLICTION: dict[str, Affliction] = {
-    "downy_mildew": Affliction(id=1, name="Downy Mildew"),
-    "powdery_mildew": Affliction(id=2, name="Powdery Mildew"),
-    "mite": Affliction(id=3, name="Mite"),
-    "black_spot": Affliction(id=4, name="Black Spot"),
+    "downy_mildew_leaf": Affliction(id=1, name="Downy Mildew"),
+    "powdery_mildew_leaf": Affliction(id=2, name="Powdery Mildew"),
+    "two_spotted_spider_mite_damage_leaf": Affliction(id=3, name="Mite"),
+    "unknown_disease_leaf": Affliction(id=5, name="Unknown Disease"),
+    "chemical_residue_leaf": Affliction(id=6, name="Chemical Residue"),
 }
 
 

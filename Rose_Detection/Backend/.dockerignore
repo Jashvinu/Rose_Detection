@@ -1,0 +1,9 @@
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pdf
+**/*.pt
+**/*.onnx
+.git
+.gitignore
+postman_collection.json

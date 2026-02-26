@@ -15,25 +15,24 @@ logger = logging.getLogger(__name__)
 
 from app.config import Settings, get_settings
 from app.pipeline.affliction_mapper import map_results, parse_pv_token
-from app.pipeline.classifier import TFLiteClassifier
+from app.pipeline.classifier import YOLOTFLiteDetector
 from app.pipeline.orchestrator import run_pipeline
 from app.pipeline.visualizer import annotate_image
 from app.pv_router import router as pv_router
 from app.schemas import Detection, SummaryResponse
 
 # ── Globals populated at startup ─────────────────────────────────────────────
-classifier: TFLiteClassifier | None = None
+detector: YOLOTFLiteDetector | None = None
 settings: Settings | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global classifier, settings
+    global detector, settings
     settings = get_settings()
-    classifier = TFLiteClassifier(
+    detector = YOLOTFLiteDetector(
         model_path=settings.model_path,
         labels_path=settings.labels_path,
-        tile_size=settings.tile_size,
     )
     yield
 
@@ -53,7 +52,7 @@ app = FastAPI(
         "- `GET /admin/flowers/greenhouses` — list greenhouses\n\n"
         "**Data flow**: Greenhouse → Scout → Partition (A/B/C) → Bed → Photos + Afflictions"
     ),
-    version="1.0.0",
+    version="2.0.0",
     lifespan=lifespan,
 )
 app.include_router(pv_router)
@@ -79,7 +78,6 @@ async def detect(
     token: str = Form(default=""),
     callback_url: str = Form(default=""),
     confidence_threshold: float | None = Form(default=None),
-    tile_overlap: float | None = Form(default=None),
     min_hits: int | None = Form(default=None),
     visualize: bool = Form(default=True),
     motion_compensation: bool | None = Form(default=None),
@@ -116,10 +114,9 @@ async def detect(
         image_pairs=image_pairs,
         token=token,
         job_id=job_id,
-        classifier=classifier,
+        detector=detector,
         settings=settings,
         confidence_threshold=confidence_threshold,
-        tile_overlap=tile_overlap,
         min_hits=min_hits,
         motion_compensation=motion_compensation,
     )
@@ -192,7 +189,7 @@ async def get_frame_image(job_id: str, frame_index: int):
 async def health():
     return {
         "status": "ok",
-        "pipeline": "detect-track-count",
-        "model": settings.model_path.name if settings else "not loaded",
-        "labels": classifier.labels if classifier else [],
+        "model": "YOLO11s TFLite",
+        "model_file": settings.model_path.name if settings else "not loaded",
+        "labels": detector.labels if detector else [],
     }

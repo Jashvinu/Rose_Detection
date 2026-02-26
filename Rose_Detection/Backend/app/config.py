@@ -14,9 +14,6 @@ class Settings(BaseSettings):
     model_filename: str = "rose_disease_model.tflite"
     labels_filename: str = "labels.txt"
 
-    # Tile / SAHI
-    tile_size: int = 224
-    tile_overlap: float = 0.5
     confidence_threshold: float = 0.5
 
     # NMS

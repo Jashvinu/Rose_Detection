@@ -1,2 +1,6 @@
-black_spot
-downy_mildew
+healthy_leaf
+powdery_mildew_leaf
+two_spotted_spider_mite_damage_leaf
+unknown_disease_leaf
+chemical_residue_leaf
+downy_mildew_leaf
