@@ -19,30 +19,22 @@ Server runs at `http://localhost:8000`.
 
 ## API
 
-### `POST /detect`
+### `POST /detect_flowers`
 
 Send one image, receive a list of detections.
 
-**Request** — `multipart/form-data`
+**Request** — `application/json`
 
 | Field | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `image` | file | yes | — | JPEG, PNG, or any PIL-supported format |
-| `confidence_threshold` | float | no | `0.5` | Override detection confidence for this request |
+| `image_s3_uri` | string | yes | — | S3 URI, e.g. `s3://bucket/path/to/leaf.jpg` |
 
 **Example — curl**
 
 ```bash
-curl -X POST http://localhost:8000/detect \
-  -F "image=@/path/to/leaf.jpg"
-```
-
-With a custom confidence threshold:
-
-```bash
-curl -X POST http://localhost:8000/detect \
-  -F "image=@/path/to/leaf.jpg" \
-  -F "confidence_threshold=0.4"
+curl -X POST http://localhost:8000/detect_flowers \
+  -H "Content-Type: application/json" \
+  -d '{"image_s3_uri":"s3://rose-images/leaf.jpg"}'
 ```
 
 **Response**
@@ -157,7 +149,7 @@ Requires Python 3.11. `tflite-runtime` is Linux x86-64 only — use Docker on ma
 ```
 Backend/
 ├── app/
-│   ├── main.py               # FastAPI app — /detect and /health
+│   ├── main.py               # FastAPI app — /detect_flowers and /health
 │   ├── config.py             # Settings via env vars (ROSE_ prefix)
 │   ├── schemas.py            # BBox, Detection, DetectResponse
 │   ├── model/

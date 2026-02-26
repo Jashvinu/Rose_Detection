@@ -17,3 +17,7 @@ class Detection(BaseModel):
 
 class DetectResponse(BaseModel):
     detections: list[Detection]
+
+
+class DetectFlowersRequest(BaseModel):
+    image_s3_uri: str
